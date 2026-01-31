@@ -3,8 +3,11 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Star, ShoppingCart } from "lucide-react";
+import { Search, Star } from "lucide-react";
 import BackButton from "@/components/navigation/BackButton";
+import CategorySelector, { useCategories } from "@/components/ui/CategorySelector";
+import AddToCartButton from "@/components/ui/AddToCartButton";
+import QuantityControl from "@/components/ui/QuantityControl";
 
 const categories = [
   "Top picks - Ayurveda",
@@ -49,36 +52,96 @@ const products = [
 ];
 
 export default function MedicinesPage() {
-  const [activeCategory, setActiveCategory] = useState(categories[0]);
+  const { activeCategory, handleCategoryChange } = useCategories(categories);
   const [search, setSearch] = useState("");
+  const [cartItems, setCartItems] = useState<Array<{ id: number; name: string; price: number; category: string; quantity: number }>>([]);
+  const [productQuantities, setProductQuantities] = useState<Record<number, number>>({});
+
+  // Handle increasing quantity
+  const handleIncreaseQuantity = (productId: number, productName: string, price: number) => {
+    const currentQuantity = productQuantities[productId] || 0;
+    const newQuantity = currentQuantity + 1;
+    
+    setProductQuantities(prev => ({
+      ...prev,
+      [productId]: newQuantity
+    }));
+
+    // Update cart items
+    setCartItems(prev => {
+      const existingItem = prev.find(item => item.id === productId);
+      if (existingItem) {
+        return prev.map(item => 
+          item.id === productId 
+            ? { ...item, quantity: newQuantity }
+            : item
+        );
+      } else {
+        return [...prev, { 
+          id: productId, 
+          name: productName, 
+          price: price, 
+          category: "Medicine",
+          quantity: newQuantity
+        }];
+      }
+    });
+  };
+
+  // Handle decreasing quantity
+  const handleDecreaseQuantity = (productId: number) => {
+    const currentQuantity = productQuantities[productId] || 0;
+    if (currentQuantity > 0) {
+      const newQuantity = currentQuantity - 1;
+      
+      setProductQuantities(prev => ({
+        ...prev,
+        [productId]: newQuantity
+      }));
+
+      // Update cart items
+      if (newQuantity === 0) {
+        setCartItems(prev => prev.filter(item => item.id !== productId));
+      } else {
+        setCartItems(prev => prev.map(item => 
+          item.id === productId 
+            ? { ...item, quantity: newQuantity }
+            : item
+        ));
+      }
+    }
+  };
+
+  // Handle cart click - fetch cart data
+  const handleCartClick = async () => {
+    console.log("Cart clicked - current items:", cartItems);
+    // Add navigation to cart page or show cart modal
+  };
 
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="max-w-md mx-auto px-4 space-y-8 overflow-x-hidden">
+    <div className="max-w-md mx-auto lg:max-w-7xl px-4 lg:px-8 space-y-6 lg:space-y-8 overflow-x-hidden">
       {/* HEADER WITH BACK BUTTON + CART */}
       <section>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <BackButton />
-            <h1 className="text-2xl font-semibold text-gray-900">Medicines</h1>
+            <h1 className="text-2xl lg:text-3xl font-semibold text-gray-900">Medicines</h1>
           </div>
-
-          <button
-            aria-label="Cart"
-            className="inline-flex items-center justify-center p-2 rounded-full border border-pink-200 text-pink-600 hover:bg-pink-50"
-          >
-            <ShoppingCart size={20} />
-          </button>
+          <AddToCartButton 
+            cartItems={cartItems} 
+            onCartClick={handleCartClick}
+          />
         </div>
-        <p className="text-sm text-gray-500">Browse and shop ayurvedic medicines</p>
+        <p className="text-sm lg:text-base text-gray-500">Browse and shop ayurvedic medicines</p>
       </section>
 
       {/* SEARCH */}
       <section>
-        <div className="relative max-w-md">
+        <div className="relative max-w-md lg:max-w-lg xl:max-w-xl">
           <Search
             size={18}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -87,59 +150,49 @@ export default function MedicinesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search medicines"
-            className="w-full border rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-teal-500"
+            className="w-full border rounded-xl pl-10 pr-3 py-2.5 lg:py-3 text-sm lg:text-base outline-none focus:ring-1 focus:ring-teal-500"
           />
         </div>
       </section>
 
       {/* CATEGORY (HORIZONTAL, COMPACT SELECT ON RIGHT) */}
-      <section>
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-700">Category</h3>
-          <select
-            value={activeCategory}
-            onChange={(e) => setActiveCategory(e.target.value)}
-            className="border rounded-full px-3 py-1.5 text-xs bg-white shadow-sm focus:outline-none focus:ring-1 focus:ring-teal-500 w-40 sm:w-44"
-          >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
-      </section>
+      <CategorySelector
+        categories={categories}
+        activeCategory={activeCategory}
+        onCategoryChange={handleCategoryChange}
+        heading="Category"
+      />
 
       {/* PRODUCTS */}
       <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Popular Products</h3>
+        <h3 className="text-sm lg:text-base font-semibold text-gray-700 mb-4 lg:mb-6">Popular Products</h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
           {filtered.map((p) => (
             <div
               key={p.id}
-              className="relative bg-white rounded-2xl border border-pink-100 p-4 pr-16 shadow-sm flex items-start md:items-center gap-3 transition hover:shadow-md hover:border-pink-200"
+              className="relative bg-white rounded-2xl border border-pink-100 p-4 pr-16 lg:pr-4 lg:pb-16 shadow-sm flex lg:flex-col items-start md:items-center lg:items-start gap-3 lg:gap-4 transition hover:shadow-md hover:border-pink-200"
             >
               <img
                 src={p.image}
                 alt={p.name}
-                className="w-20 h-20 object-contain rounded-xl bg-pink-50 ring-1 ring-pink-100"
+                className="w-20 h-20 lg:w-full lg:h-32 xl:h-40 object-contain rounded-xl bg-pink-50 ring-1 ring-pink-100"
               />
 
-              <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex-1 min-w-0 space-y-1 lg:space-y-2">
                 {p.badge && (
-                  <span className="inline-block text-[11px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">
+                  <span className="inline-block text-[11px] lg:text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">
                     {p.badge}
                   </span>
                 )}
 
-                <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
+                <p className="text-sm lg:text-base font-semibold text-gray-900 leading-snug line-clamp-2 lg:line-clamp-3">
                   {p.name}
                 </p>
 
-                <p className="text-xs text-gray-500">{p.qty}</p>
+                <p className="text-xs lg:text-sm text-gray-500">{p.qty}</p>
 
-                <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-2 text-xs lg:text-sm">
                   <span className="bg-green-600 text-white px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm">
                     {p.rating} <Star size={10} className="opacity-90" />
                   </span>
@@ -147,23 +200,24 @@ export default function MedicinesPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold text-pink-700">₹{p.price}</span>
-                  <span className="text-sm line-through text-gray-400">₹{p.mrp}</span>
-                  <span className="text-sm text-green-600">{p.discount}</span>
+                  <span className="text-lg lg:text-xl font-semibold text-pink-700">₹{p.price}</span>
+                  <span className="text-sm lg:text-base line-through text-gray-400">₹{p.mrp}</span>
+                  <span className="text-sm lg:text-base text-green-600">{p.discount}</span>
                 </div>
 
-                <span className="inline-block text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded">
+                <span className="inline-block text-xs lg:text-sm bg-pink-100 text-pink-700 px-2 py-0.5 rounded">
                   {p.offer}
                 </span>
               </div>
 
               <div className="shrink-0">
-                <button
-                  aria-label="Add to cart"
-                  className="absolute right-4 top-[56%] -translate-y-1/2 bg-pink-600 text-white px-4 py-1.5 rounded-full font-semibold shadow-sm hover:bg-pink-700 active:scale-95 transition"
-                >
-                  ADD
-                </button>
+                <QuantityControl
+                  quantity={productQuantities[p.id] || 0}
+                  onIncrease={() => handleIncreaseQuantity(p.id, p.name, p.price)}
+                  onDecrease={() => handleDecreaseQuantity(p.id)}
+                  productName={p.name}
+                  className="absolute right-4 top-[56%] lg:right-4 lg:top-auto lg:bottom-4 lg:-translate-y-0 -translate-y-1/2"
+                />
               </div>
             </div>
           ))}

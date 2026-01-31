@@ -1,10 +1,12 @@
-// FILE PATH: app/lab/page.tsx
 
 "use client";
 
 import { useState } from "react";
-import { FlaskConical, Search } from "lucide-react";
+import { Search, AlertTriangle } from "lucide-react";
 import BackButton from "@/components/navigation/BackButton";
+import CategorySelector, { useCategories } from "@/components/ui/CategorySelector";
+import QuantityControl from "@/components/ui/QuantityControl";
+import AddToCartButton from "@/components/ui/AddToCartButton";
 
 const categories = [
   "All",
@@ -16,17 +18,188 @@ const categories = [
 ];
 
 const tests = [
-  { id: 1, name: "Complete Blood Count (CBC)", category: "Blood Test", price: 350 },
-  { id: 2, name: "Blood Sugar (Fasting)", category: "Blood Test", price: 120 },
-  { id: 3, name: "X-Ray Chest", category: "X-Ray", price: 500 },
-  { id: 4, name: "MRI Brain", category: "MRI", price: 4500 },
-  { id: 5, name: "CT Scan Head", category: "CT Scan", price: 3200 },
-  { id: 6, name: "Urine Routine Test", category: "Urine Test", price: 180 },
+  { 
+    id: 1, 
+    name: "Complete Blood Count (CBC)", 
+    description: "Pathology • TAT: 6-8 Hours",
+    category: "Blood Test", 
+    price: 350,
+    discount: "10% OFF"
+  },
+  { 
+    id: 2, 
+    name: "Blood Sugar (Fasting)", 
+    description: "Pathology • TAT: 4-6 Hours",
+    category: "Blood Test", 
+    price: 120,
+    discount: "5% OFF"
+  },
+  { 
+    id: 3, 
+    name: "X-Ray Chest", 
+    description: "Radiology • TAT: 2-4 Hours",
+    category: "X-Ray", 
+    price: 500,
+    discount: "15% OFF"
+  },
+  { 
+    id: 4, 
+    name: "MRI Brain", 
+    description: "Radiology • TAT: 1-2 Days",
+    category: "MRI", 
+    price: 4500,
+    discount: "8% OFF"
+  },
+  { 
+    id: 5, 
+    name: "CT Scan Head", 
+    description: "Radiology • TAT: 4-6 Hours",
+    category: "CT Scan", 
+    price: 3200,
+    discount: "12% OFF"
+  },
+  { 
+    id: 6, 
+    name: "Urine Routine Test", 
+    description: "Pathology • TAT: 2-4 Hours",
+    category: "Urine Test", 
+    price: 180,
+    discount: "20% OFF"
+  },
 ];
 
 export default function LabPage() {
-  const [activeCategory, setActiveCategory] = useState("All");
+  const { activeCategory, handleCategoryChange } = useCategories(categories);
   const [search, setSearch] = useState("");
+  const [testQuantities, setTestQuantities] = useState<Record<number, number>>({});
+  const [cartItems, setCartItems] = useState<Array<{ id: number; name: string; price: number; category: string; quantity: number }>>([]);
+
+  // Handle increasing quantity
+  const handleIncreaseQuantity = (testId: number, testName: string, price: number) => {
+    const test = tests.find(t => t.id === testId);
+    if (test) {
+      const currentQuantity = testQuantities[testId] || 0;
+      const newQuantity = currentQuantity + 1;
+      
+      setTestQuantities(prev => ({
+        ...prev,
+        [testId]: newQuantity
+      }));
+
+      // Update cart items
+      setCartItems(prev => {
+        const existingItem = prev.find(item => item.id === testId);
+        if (existingItem) {
+          return prev.map(item => 
+            item.id === testId 
+              ? { ...item, quantity: newQuantity }
+              : item
+          );
+        } else {
+          return [...prev, { 
+            id: testId, 
+            name: testName, 
+            price: price, 
+            category: test.category,
+            quantity: newQuantity
+          }];
+        }
+      });
+      console.log(`Added test: ${testName} (ID: ${testId}) - Price: ₹${price}`);
+    }
+  };
+
+  // Handle decreasing quantity
+  const handleDecreaseQuantity = (testId: number) => {
+    const currentQuantity = testQuantities[testId] || 0;
+    if (currentQuantity > 0) {
+      const newQuantity = currentQuantity - 1;
+      
+      setTestQuantities(prev => ({
+        ...prev,
+        [testId]: newQuantity
+      }));
+
+      // Update cart items
+      if (newQuantity === 0) {
+        setCartItems(prev => prev.filter(item => item.id !== testId));
+      } else {
+        setCartItems(prev => prev.map(item => 
+          item.id === testId 
+            ? { ...item, quantity: newQuantity }
+            : item
+        ));
+      }
+    }
+  };
+
+  // Handle cart click - fetch cart data
+  const handleCartClick = async () => {
+    console.log("Cart clicked - current items:", cartItems);
+    // Add navigation to cart page or show cart modal
+    // Example: router.push('/cart');
+  };
+
+  // Category color themes
+  const getCategoryTheme = (category: string) => {
+    const themes = {
+      "Blood Test": {
+        iconBg: "bg-red-50",
+        iconBgHover: "group-hover:bg-red-100",
+        iconColor: "text-red-500",
+        shadow: "shadow-red-100/50",
+        hoverShadow: "hover:shadow-red-200/60",
+        border: "border-red-100/50",
+        hoverBorder: "hover:border-red-200"
+      },
+      "X-Ray": {
+        iconBg: "bg-blue-50",
+        iconBgHover: "group-hover:bg-blue-100",
+        iconColor: "text-blue-500",
+        shadow: "shadow-blue-100/50",
+        hoverShadow: "hover:shadow-blue-200/60",
+        border: "border-blue-100/50",
+        hoverBorder: "hover:border-blue-200"
+      },
+      "MRI": {
+        iconBg: "bg-purple-50",
+        iconBgHover: "group-hover:bg-purple-100",
+        iconColor: "text-purple-500",
+        shadow: "shadow-purple-100/50",
+        hoverShadow: "hover:shadow-purple-200/60",
+        border: "border-purple-100/50",
+        hoverBorder: "hover:border-purple-200"
+      },
+      "CT Scan": {
+        iconBg: "bg-indigo-50",
+        iconBgHover: "group-hover:bg-indigo-100",
+        iconColor: "text-indigo-500",
+        shadow: "shadow-indigo-100/50",
+        hoverShadow: "hover:shadow-indigo-200/60",
+        border: "border-indigo-100/50",
+        hoverBorder: "hover:border-indigo-200"
+      },
+      "Urine Test": {
+        iconBg: "bg-yellow-50",
+        iconBgHover: "group-hover:bg-yellow-100",
+        iconColor: "text-yellow-600",
+        shadow: "shadow-yellow-100/50",
+        hoverShadow: "hover:shadow-yellow-200/60",
+        border: "border-yellow-100/50",
+        hoverBorder: "hover:border-yellow-200"
+      },
+    };
+    
+    return themes[category as keyof typeof themes] || {
+      iconBg: "bg-gray-50",
+      iconBgHover: "group-hover:bg-gray-100",
+      iconColor: "text-gray-500",
+      shadow: "shadow-gray-100/50",
+      hoverShadow: "hover:shadow-gray-200/60",
+      border: "border-gray-100/50",
+      hoverBorder: "hover:border-gray-200"
+    };
+  };
 
   const filteredTests = tests.filter((t) => {
     const byCat = activeCategory === "All" || t.category === activeCategory;
@@ -38,11 +211,17 @@ export default function LabPage() {
     <div className="space-y-8 max-w-full w-full overflow-x-hidden">
       {/* HEADER WITH BACK BUTTON */}
       <section>
-        <div className="flex items-center gap-3 mb-2">
-          <BackButton />
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Lab Test Pricing
-          </h1>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <BackButton />
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Lab Test Pricing
+            </h1>
+          </div>
+          <AddToCartButton 
+            cartItems={cartItems} 
+            onCartClick={handleCartClick}
+          />
         </div>
         <p className="text-sm text-gray-500">
           Browse tests by category and price
@@ -65,64 +244,77 @@ export default function LabPage() {
         </div>
       </section>
 
-      {/* CATEGORIES */}
-      <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">
-          Categories
-        </h3>
+      {/* CATEGORY (HORIZONTAL, COMPACT SELECT ON RIGHT) */}
+      <CategorySelector
+        categories={categories}
+        activeCategory={activeCategory}
+        onCategoryChange={handleCategoryChange}
+        heading="Category"
+      />
 
-        <div className="flex flex-wrap gap-2">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-1.5 rounded-full text-sm border transition ${
-                activeCategory === cat
-                  ? "bg-teal-600 text-white border-teal-600"
-                  : "bg-white text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+      {/* TEST LIST */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+            Available Tests
+          </h3>
+          <span className="text-xs text-gray-400">
+            {filteredTests.length} Results
+          </span>
         </div>
-      </section>
 
-      {/* TEST LIST (same card feel as Dashboard lists) */}
-      <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">
-          Available Tests
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredTests.map((test) => (
-            <div
-              key={test.id}
-              className="bg-white rounded-2xl border border-teal-100 p-4 shadow-sm flex items-center justify-between gap-4"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-11 h-11 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-                  <FlaskConical size={18} className="text-red-600" />
+        <div className="space-y-2">
+          {filteredTests.map((test) => {
+            const theme = getCategoryTheme(test.category);
+            return (
+              <div
+                key={test.id}
+                className={`bg-white rounded-xl border-2 p-4 transition-all duration-300 relative group ${theme.border} ${theme.hoverBorder} ${theme.shadow} ${theme.hoverShadow} shadow-lg hover:shadow-2xl hover:-translate-y-0.5`}
+              >
+                {/* Discount Badge */}
+                <div className="absolute top-3 right-3">
+                  <span className="bg-gradient-to-r from-red-500 to-red-600 text-white text-[11px] px-2 py-1 rounded-full font-semibold shadow-lg">
+                    {test.discount}
+                  </span>
                 </div>
 
-                <div className="min-w-0">
-                  <h4 className="text-sm font-semibold text-gray-900 truncate">
-                    {test.name}
-                  </h4>
-                  <p className="text-xs text-gray-500 truncate">
-                    {test.category}
-                  </p>
+                <div className="flex items-start gap-3">
+                  {/* Category Icon */}
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 ${theme.iconBg} ${theme.iconBgHover} shadow-sm`}>
+                    <AlertTriangle size={18} className={`${theme.iconColor}`} />
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-1">
+                      {test.name}
+                    </h4>
+                    
+                    <p className="text-xs text-gray-600 mb-3 leading-relaxed">
+                      {test.description}
+                    </p>
+                    
+                    <div className="flex items-end justify-between">
+                      <span className="text-base font-bold text-teal-600">
+                        ₹{test.price}
+                      </span>
+                      
+                      {/* Quantity Control */}
+                      <QuantityControl
+                        quantity={testQuantities[test.id] || 0}
+                        onIncrease={() => handleIncreaseQuantity(test.id, test.name, test.price)}
+                        onDecrease={() => handleDecreaseQuantity(test.id)}
+                        productName={test.name}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <span className="text-sm font-semibold text-gray-900 shrink-0">
-                ₹{test.price}
-              </span>
-            </div>
-          ))}
+            );
+          })}
 
           {filteredTests.length === 0 && (
-            <div className="col-span-full text-center text-sm text-gray-500 py-6">
+            <div className="text-center text-sm text-gray-500 py-6">
               No lab tests found
             </div>
           )}
