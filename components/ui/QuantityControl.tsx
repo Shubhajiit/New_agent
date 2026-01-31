@@ -64,6 +64,5 @@ export default function QuantityControl({
         <Plus size={16} />
       </button>
     </div>
-  
   );
 }

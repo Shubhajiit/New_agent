@@ -2,7 +2,8 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Star } from "lucide-react";
 import BackButton from "@/components/navigation/BackButton";
 import CategorySelector, { useCategories } from "@/components/ui/CategorySelector";
@@ -52,10 +53,39 @@ const products = [
 ];
 
 export default function MedicinesPage() {
+  const router = useRouter();
   const { activeCategory, handleCategoryChange } = useCategories(categories);
   const [search, setSearch] = useState("");
   const [cartItems, setCartItems] = useState<Array<{ id: number; name: string; price: number; category: string; quantity: number }>>([]);
   const [productQuantities, setProductQuantities] = useState<Record<number, number>>({});
+
+  // Sync cart with localStorage
+  useEffect(() => {
+    const savedCart = localStorage.getItem('cartItems');
+    if (savedCart) {
+      try {
+        const parsed = JSON.parse(savedCart);
+        setCartItems(parsed);
+        // Update quantities from cart
+        const quantities: Record<number, number> = {};
+        parsed.forEach((item: any) => {
+          if (item.category === 'Medicine') {
+            quantities[item.id] = item.quantity;
+          }
+        });
+        setProductQuantities(quantities);
+      } catch (error) {
+        console.error('Error parsing cart data:', error);
+      }
+    }
+  }, []);
+
+  // Update localStorage when cart changes
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    }
+  }, [cartItems]);
 
   // Handle increasing quantity
   const handleIncreaseQuantity = (productId: number, productName: string, price: number) => {
@@ -112,10 +142,9 @@ export default function MedicinesPage() {
     }
   };
 
-  // Handle cart click - fetch cart data
-  const handleCartClick = async () => {
-    console.log("Cart clicked - current items:", cartItems);
-    // Add navigation to cart page or show cart modal
+  // Handle cart click - navigate to cart page
+  const handleCartClick = () => {
+    router.push('/cart');
   };
 
   const filtered = products.filter((p) =>

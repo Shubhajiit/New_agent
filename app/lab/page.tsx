@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Search, AlertTriangle } from "lucide-react";
 import BackButton from "@/components/navigation/BackButton";
 import CategorySelector, { useCategories } from "@/components/ui/CategorySelector";
@@ -69,10 +70,39 @@ const tests = [
 ];
 
 export default function LabPage() {
+  const router = useRouter();
   const { activeCategory, handleCategoryChange } = useCategories(categories);
   const [search, setSearch] = useState("");
   const [testQuantities, setTestQuantities] = useState<Record<number, number>>({});
   const [cartItems, setCartItems] = useState<Array<{ id: number; name: string; price: number; category: string; quantity: number }>>([]);
+
+  // Sync cart with localStorage
+  useEffect(() => {
+    const savedCart = localStorage.getItem('cartItems');
+    if (savedCart) {
+      try {
+        const parsed = JSON.parse(savedCart);
+        setCartItems(parsed);
+        // Update quantities from cart
+        const quantities: Record<number, number> = {};
+        parsed.forEach((item: any) => {
+          if (item.category !== 'Medicine') {
+            quantities[item.id] = item.quantity;
+          }
+        });
+        setTestQuantities(quantities);
+      } catch (error) {
+        console.error('Error parsing cart data:', error);
+      }
+    }
+  }, []);
+
+  // Update localStorage when cart changes
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    }
+  }, [cartItems]);
 
   // Handle increasing quantity
   const handleIncreaseQuantity = (testId: number, testName: string, price: number) => {
@@ -133,11 +163,9 @@ export default function LabPage() {
     }
   };
 
-  // Handle cart click - fetch cart data
-  const handleCartClick = async () => {
-    console.log("Cart clicked - current items:", cartItems);
-    // Add navigation to cart page or show cart modal
-    // Example: router.push('/cart');
+  // Handle cart click - navigate to cart page
+  const handleCartClick = () => {
+    router.push('/cart');
   };
 
   // Category color themes
